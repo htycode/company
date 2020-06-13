@@ -47,8 +47,19 @@ def get_sort():
     # 打印数据
     db.commit()
     cursor.close()  # 关闭连接
-    return ({"sort":results[0][1],"href":results[0][2],"dalei":results[0][3]})
+    return ({"id":results[0][0],"sort":results[0][1],"href":results[0][2],"dalei":results[0][3]})
 
+# 数据库: 此分类下公司爬取完上传is_used=1
+def post_sort(id):
+    # 链接数据库
+    db = pymysql.connect(host="rm-bp1278x3bc1a6ujve1o.mysql.rds.aliyuncs.com", user="test_0527",passwd="test_0527",db="test_0527")
+    # 使用cursor()方法获取操作游标
+    cursor = db.cursor()
+    # 执行sql语句
+    cursor.execute("UPDATE bfzyw_sort SET is_using = 1 WHERE id = {}".format(id))
+    # 打印数据
+    db.commit()
+    cursor.close()  # 关闭连接
 
 # 获取公司网址
 def get_shop_html(shop_url):
@@ -106,8 +117,7 @@ def get_shop_info(html):
 
     return {'address': address, 'phone': phone, '固话': 固话}
 
-
-# 上传到数据库
+# 公司数据:上传到数据库
 def post_sjk(page, index, phone, 固话, shop_url, shop_name, address):
     payload = 'company_name=%s&trade=%s&address=%s&contact_name=%s&mobile=%s&phone=%s' % (shop_name, trade, address, lxr, phone, 固话)
 
@@ -127,7 +137,6 @@ def post_sjk(page, index, phone, 固话, shop_url, shop_name, address):
 sort_info = get_sort()
 trade = sort_info["sort"]
 sort_href = sort_info["href"]
-dalei = sort_info["dalei"]
 
 # 获取公司列表页_html
 for page in range(1,200):
@@ -160,9 +169,10 @@ for page in range(1,200):
                 write_to_txt(shop_url)
             else:
                 # fun: 上传到数据库
-                print(trade,dalei)
+                print(trade,sort_info["dalei"])
                 post_sjk(page,index, phone, 固话, shop_url, shop_name, address)
 
+    post_sort(sort_info["id"])
 
 
 
