@@ -12,6 +12,8 @@ chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\selenum\AutomationPr
 import re
 import sys
 import json
+from time import sleep
+
 
 import pymysql
 import requests
@@ -56,7 +58,7 @@ def post_sort(id):
     # 使用cursor()方法获取操作游标
     cursor = db.cursor()
     # 执行sql语句
-    cursor.execute("UPDATE bfzyw_sort SET is_using = 1 WHERE id = {}".format(id))
+    cursor.execute("UPDATE bfzyw_sort SET is_used = 1 WHERE id = {}".format(id))
     # 打印数据
     db.commit()
     cursor.close()  # 关闭连接
@@ -64,6 +66,7 @@ def post_sort(id):
 # 获取公司网址
 def get_shop_html(shop_url):
     if re.search("^//",shop_url):shop_url = "http:" + shop_url
+    shop_url = shop_url.replace(" ","")
     headers = {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
         'Accept-Encoding': 'gzip, deflate',
@@ -74,7 +77,7 @@ def get_shop_html(shop_url):
         'Upgrade-Insecure-Requests': '1',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36',
     }
-    res = requests.get(shop_url+"/contact.aspx",headers=headers)
+    res = requests.get(shop_url+"/contact.aspx",headers=headers,timeout=(5, 10))
     # print(res.text)
     return res.text
 
@@ -118,12 +121,12 @@ def get_shop_info(html):
     return {'address': address, 'phone': phone, '固话': 固话}
 
 # 公司数据:上传到数据库
-def post_sjk(page, index, phone, 固话, shop_url, shop_name, address):
+def post_sjk(page,index, shop_url, shop_name, trade, address, lxr, phone, 固话):
     payload = 'company_name=%s&trade=%s&address=%s&contact_name=%s&mobile=%s&phone=%s' % (shop_name, trade, address, lxr, phone, 固话)
 
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
     response = requests.post("http://112.124.127.143:8049/api/CyShop/PostCyShopUserOne", headers=headers,
-                             data=payload.encode("utf8"))
+                             data=payload.encode("utf8"),timeout=(5, 10))
     print(response.text)
     # page:第几页/index:第几行
     print(page, index, phone, 固话, shop_url, shop_name, address)
@@ -132,27 +135,40 @@ def post_sjk(page, index, phone, 固话, shop_url, shop_name, address):
     if response["code"] != 0:
         print("上传错误")
         sys.exit()
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>..
+all_index = 0
 # 数据库: 获取分类数据
 sort_info = get_sort()
 trade = sort_info["sort"]
 sort_href = sort_info["href"]
 
+
+html_page = requests.get('https://www.b2b168.com{}l-1.html'.format(sort_href),headers=headers,timeout=(5, 10)).text
+all_page = int(re.search("共 (.+?) 页",html_page)[1])
+
+
+
 # 获取公司列表页_html
-for page in range(1,200):
+for page in range(1,all_page):
     url = 'https://www.b2b168.com{}l-{}.html'.format(sort_href,page)
-    html = requests.get(url,headers=headers).text
+    html = requests.get(url,headers=headers,timeout=(5, 10)).text
 
     soup = BeautifulSoup(html,'lxml')
 
     for index,shop in enumerate(soup.find_all("div",attrs={"class": "biaoti"})):
+        sleep(0.5)
+        all_index = all_index + 1
+
         shop_url = shop.a.get('href')   #获取->公司网址
         # 获取->联系人名字
-        lxr = shop.next_sibling.next_sibling.span.get_text().replace("(经理)","")
-        # 特殊phone(在联系人中出现)
-        lxr_phone = re.search("\d{11}", lxr)[0] if re.search("\d{11}",lxr) else ""
+        lxr = shop.next_sibling.next_sibling.span.get_text().replace("(经理)","").replace("'","")
         # 获取->公司名
         shop_name = shop.a.get('title')
+
+        # 特殊phone(在联系人中出现)
+        lxr_phone = re.search("\d{11}", lxr)[0] if re.search("\d{11}",lxr) else ""
+
+        
 
         # 获取->公司信息
         if shop_name == "八方资源网":pass
@@ -169,10 +185,11 @@ for page in range(1,200):
                 write_to_txt(shop_url)
             else:
                 # fun: 上传到数据库
-                print(trade,sort_info["dalei"])
-                post_sjk(page,index, phone, 固话, shop_url, shop_name, address)
+                print(all_index, trade,sort_info["dalei"],sort_href)
+                post_sjk(page,index, shop_url, shop_name, trade, address, lxr, phone, 固话)
 
-    post_sort(sort_info["id"])
+
+post_sort(sort_info["id"])
 
 
 
