@@ -89,7 +89,7 @@ def get_shop_info(html):
     address = ""
 
     if "<h3>企业信息</h3>" in html:
-        address = soup.select('span.sp')[0].string.lstrip()
+        address = soup.select('span.sp')[0].string.lstrip().replace("'","")
 
         if len(soup.select('span.li02ok'))== 1:
             # 先找绑定手机的
@@ -102,7 +102,7 @@ def get_shop_info(html):
     elif "查看地图" in html:
         infos = soup.find_all("ul", attrs={"class": "gxrq"})
         for index, info in enumerate(infos):
-            if "地址" in info.get_text(): address = info.get_text().replace("地址：", "").replace("查看地图", "")
+            if "地址" in info.get_text(): address = info.get_text().replace("地址：", "").replace("查看地图", "").replace("'","")
             if "电话" in info.get_text(): 固话 = info.get_text().replace("电话：", "")
         # 手机
         infos = soup.find_all("dd", attrs={"class": ""})
@@ -112,7 +112,7 @@ def get_shop_info(html):
             if re.search("\d{11}", info.get_text()): phone = re.search("\d{11}", info.get_text())[0]
 
     elif "产品分类" or "联系方式" in html:
-        if re.search("地　　址：(.+?)<", html): address = re.search("地　　址：(.+?)<", html)[1].lstrip()
+        if re.search("地　　址：(.+?)<", html): address = re.search("地　　址：(.+?)<", html)[1].lstrip().replace("'","")
         if re.search("电　　话：(.+?)<", html): phone = re.search("电　　话：(.+?)<", html)[1].lstrip()
         if re.search("手　　机：(.+?)<", html): 固话 = re.search("手　　机：(.+?)<", html)[1].lstrip()
     else:
@@ -135,7 +135,8 @@ def post_sjk(page,index, shop_url, shop_name, trade, address, lxr, phone, 固话
     if response["code"] != 0:
         print("上传错误")
         sys.exit()
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>..
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主函数>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>..
+
 all_index = 0
 # 数据库: 获取分类数据
 sort_info = get_sort()
@@ -144,8 +145,7 @@ sort_href = sort_info["href"]
 
 
 html_page = requests.get('https://www.b2b168.com{}l-1.html'.format(sort_href),headers=headers,timeout=(5, 10)).text
-all_page = int(re.search("共 (.+?) 页",html_page)[1])
-
+all_page = int(re.search("共 (.+?) 页",html_page)[1])+1
 
 
 # 获取公司列表页_html
@@ -156,14 +156,14 @@ for page in range(1,all_page):
     soup = BeautifulSoup(html,'lxml')
 
     for index,shop in enumerate(soup.find_all("div",attrs={"class": "biaoti"})):
-        sleep(0.5)
+        sleep(1)
         all_index = all_index + 1
 
         shop_url = shop.a.get('href')   #获取->公司网址
         # 获取->联系人名字
         lxr = shop.next_sibling.next_sibling.span.get_text().replace("(经理)","").replace("'","")
         # 获取->公司名
-        shop_name = shop.a.get('title')
+        shop_name = shop.a.get('title').replace("'","")
 
         # 特殊phone(在联系人中出现)
         lxr_phone = re.search("\d{11}", lxr)[0] if re.search("\d{11}",lxr) else ""

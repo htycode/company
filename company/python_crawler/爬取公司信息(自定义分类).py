@@ -49,6 +49,9 @@ def get_shop_html(shop_url):
     }
     res = requests.get(shop_url+"/contact.aspx",headers=headers)
     print(res.text)
+    print(res.status_code)
+    if res.status_code == 404:
+        return ""
     return res.text
 
 # 爬取公司信息
@@ -59,6 +62,7 @@ def get_shop_info(html):
     address = ""
 
     if "<h3>企业信息</h3>" in html:
+
         address = soup.select('span.sp')[0].string.lstrip()
 
         if len(soup.select('span.li02ok'))== 1:
@@ -101,7 +105,7 @@ def post_sjk(page,index, all_index, shop_url, shop_name, trade, address, lxr, ph
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
     response = requests.post("http://112.124.127.143:8049/api/CyShop/PostCyShopUserOne", headers=headers,
                              data=payload.encode("utf8"))
-    print(response.text)
+    # print(response.text)
     # page:第几页/index:第几行
     print(page, index, all_index, phone, 固话, shop_url, shop_name, address)
     response = json.loads(response.text)
@@ -110,16 +114,16 @@ def post_sjk(page,index, all_index, shop_url, shop_name, trade, address, lxr, ph
         print("上传错误")
         sys.exit()
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主函数>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-trade = "农业机械"
+trade = "输送设备"
 all_index = 0
 # 获取公司列表页_html
-for page in range(25,200):
-    url = 'https://www.b2b168.com/jixie/nongyejixie/l-{}.html'.format(page)
+for page in range(15,200):
+    url = 'https://www.b2b168.com/jixie/zhilengshebei/l-{}.html'.format(page)
     html = requests.get(url,headers=headers,timeout=(5, 10)).text
 
     soup = BeautifulSoup(html,'lxml')
 
-    for index,shop in enumerate(soup.find_all("div",attrs={"class": "biaoti"})[38:]):
+    for index,shop in enumerate(soup.find_all("div",attrs={"class": "biaoti"})[14:]):
         sleep(0.5)
         all_index = all_index+1
 
