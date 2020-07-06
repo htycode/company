@@ -136,64 +136,67 @@ def post_sjk(page,index, shop_url, shop_name, trade, address, lxr, phone, 固话
         print("上传错误")
         sys.exit()
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主函数>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>..
-
-all_index = 0
-# 数据库: 获取分类数据
-sort_info = get_sort()
-trade = sort_info["sort"]
-sort_href = sort_info["href"]
-
-
-html_page = requests.get('https://www.b2b168.com{}l-1.html'.format(sort_href),headers=headers,timeout=(5, 10)).text
-all_page = int(re.search("共 (.+?) 页",html_page)[1])+1
+def main():
+    all_index = 0
+    # 数据库: 获取分类数据
+    sort_info = get_sort()
+    trade = sort_info["sort"]
+    sort_href = sort_info["href"]
 
 
-# 获取公司列表页_html
-for page in range(1,all_page):
-    url = 'https://www.b2b168.com{}l-{}.html'.format(sort_href,page)
-    html = requests.get(url,headers=headers,timeout=(5, 10)).text
+    html_page = requests.get('https://www.b2b168.com{}l-1.html'.format(sort_href),headers=headers,timeout=(5, 10)).text
+    all_page = int(re.search("共 (.+?) 页",html_page)[1])+1
 
-    soup = BeautifulSoup(html,'lxml')
 
-    for index,shop in enumerate(soup.find_all("div",attrs={"class": "biaoti"})):
-        sleep(1)
-        all_index = all_index + 1
+    # 获取公司列表页_html
+    for page in range(1,all_page):
+        url = 'https://www.b2b168.com{}l-{}.html'.format(sort_href,page)
+        html = requests.get(url,headers=headers,timeout=(5, 10)).text
 
-        shop_url = shop.a.get('href')   #获取->公司网址
-        # 获取->联系人名字
-        lxr = shop.next_sibling.next_sibling.span.get_text().replace("(经理)","").replace("'","")
-        # 获取->公司名
-        shop_name = shop.a.get('title').replace("'","")
+        soup = BeautifulSoup(html,'lxml')
 
-        # 特殊phone(在联系人中出现)
-        lxr_phone = re.search("\d{11}", lxr)[0] if re.search("\d{11}",lxr) else ""
+        for index,shop in enumerate(soup.find_all("div",attrs={"class": "biaoti"})):
+            sleep(9)
+            all_index = all_index + 1
 
-        
+            shop_url = shop.a.get('href')   #获取->公司网址
+            # 获取->联系人名字
+            lxr = shop.next_sibling.next_sibling.span.get_text().replace("(经理)","").replace("'","")
+            # 获取->公司名
+            shop_name = shop.a.get('title').replace("'","")
 
-        # 获取->公司信息
-        if shop_name == "八方资源网":pass
-        else:
-            # fun: 爬取公司信息
-            shop_info = get_shop_info(get_shop_html(shop_url))
-            address = shop_info["address"]
-            固话    = shop_info["固话"]
-            phone   = lxr_phone if shop_info["phone"] == "" else shop_info["phone"]
+            # 特殊phone(在联系人中出现)
+            lxr_phone = re.search("\d{11}", lxr)[0] if re.search("\d{11}",lxr) else ""
 
-            if phone==""and 固话 == "":
-                print(">>>>无联系方式: ",page,index,shop_url,shop_name+">>>>>>>>>>>>>>>>>>>>>>>>>>")
-                # fun: 写入到文本
-                write_to_txt(shop_url)
+            
+
+            # 获取->公司信息
+            if shop_name == "八方资源网":pass
             else:
-                # fun: 上传到数据库
-                print(all_index, trade,sort_info["dalei"],sort_href)
-                post_sjk(page,index, shop_url, shop_name, trade, address, lxr, phone, 固话)
+                # fun: 爬取公司信息
+                shop_info = get_shop_info(get_shop_html(shop_url))
+                address = shop_info["address"]
+                固话    = shop_info["固话"]
+                phone   = lxr_phone if shop_info["phone"] == "" else shop_info["phone"]
+
+                if phone==""and 固话 == "":
+                    print(">>>>无联系方式: ",page,index,shop_url,shop_name+">>>>>>>>>>>>>>>>>>>>>>>>>>")
+                    # fun: 写入到文本
+                    write_to_txt(shop_url)
+                else:
+                    # fun: 上传到数据库
+                    print(all_index, trade,sort_info["dalei"],sort_href)
+                    post_sjk(page,index, shop_url, shop_name, trade, address, lxr, phone, 固话)
+
+    # 
+    post_sort(sort_info["id"])
 
 
-post_sort(sort_info["id"])
 
-
-
-
+if __name__ == '__main__':
+    for x in range(1,100):
+        main()
+        sleep(200)
 
 # print(phone,index,lxr,shop_url,shop_name,shop_info)
 
